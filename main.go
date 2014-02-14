@@ -128,14 +128,16 @@ func main() {
 	}
 
 	// arg parsing
-	var queueSize int
+	var queueSize, lineBufferLen int
 
 	flag.IntVar(&queueSize, "queuesize", 1000, "max size for the internal line queue")
+	flag.IntVar(&lineBufferLen, "linebuf", 2048, "max length for an input line")
 	flag.Parse()
 
 	fmt.Println("using queue size ", queueSize)
+	fmt.Println("using line buffer length ", lineBufferLen)
 
-	gearLogger := &GearLogger{queueSize: queueSize, input: os.Stdin, writer: logger, lineBufferLen: 2048}
+	gearLogger := &GearLogger{queueSize: queueSize, input: os.Stdin, writer: logger, lineBufferLen: lineBufferLen}
 
 	gearLogger.Start()
 
