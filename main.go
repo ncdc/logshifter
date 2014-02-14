@@ -39,7 +39,7 @@ func (s *GearLogger) Start() {
 	close(queue)
 	writeGroup.Wait()
 
-	fmt.Println("shipper shutting down")
+	fmt.Println("gearlogger shutting down")
 }
 
 // Reads lines from input and writes to queue. If queue is unavailable for

@@ -21,14 +21,13 @@ func NewDummyReader(msgCount int, msgLength int, writeDelay time.Duration) *Dumm
 }
 
 func (reader *DummyReader) Read(b []byte) (written int, err error) {
-	fmt.Println("b len=", len(b))
 	if reader.msgCount == reader.totalRead {
-		return 0, fmt.Errorf("EOF: reader produced %d messages", reader.totalRead)
+		return 0, fmt.Errorf("EOF: produced %d message(s)", reader.totalRead)
 	}
 
 	reader.totalRead++
 
-	copy(reader.msgTemplate, b)
+	copy(b, reader.msgTemplate)
 
 	return len(reader.msgTemplate), nil
 }
@@ -40,12 +39,21 @@ func (writer *DummyWriter) Write(b []byte) (written int, err error) {
 	return len(b), nil
 }
 
-func TestStuff(t *testing.T) {
-	var queueSize int = 1000
-	reader := NewDummyReader(10, 50, time.Duration(10)*time.Millisecond)
-	writer := &DummyWriter{}
+func benchmarkGearLogger(queueSize int, messageCount int, b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		reader := NewDummyReader(messageCount, 1024, time.Duration(10)*time.Millisecond)
+		writer := &DummyWriter{}
 
-	shipper := &GearLogger{queueSize: queueSize, input: reader, writer: writer}
+		shipper := &GearLogger{queueSize: queueSize, input: reader, writer: writer}
 
-	shipper.Start()
+		shipper.Start()
+	}
 }
+
+// func BenchmarkGearLogger1(b *testing.B) { benchmarkGearLogger(1000, 100, b) }
+// func BenchmarkGearLogger2(b *testing.B) { benchmarkGearLogger(1000, 1000, b) }
+
+func BenchmarkGearLogger3(b *testing.B) { benchmarkGearLogger(1000, 10000, b) }
+
+//func BenchmarkGearLogger4(b *testing.B) { benchmarkGearLogger(1000, 100000, b) }
+//func BenchmarkGearLogger5(b *testing.B) { benchmarkGearLogger(1000, 1000000, b) }
