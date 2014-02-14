@@ -12,9 +12,10 @@ import (
 )
 
 type GearLogger struct {
-	queueSize int
-	writer    io.Writer
-	input     io.Reader
+	queueSize     int
+	lineBufferLen int
+	writer        io.Writer
+	input         io.Reader
 }
 
 func (s *GearLogger) Start() {
@@ -50,7 +51,7 @@ func (s *GearLogger) Start() {
 func (s *GearLogger) Read(input io.Reader, queue chan []byte, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	reader := bufio.NewReader(input)
+	reader := bufio.NewReaderSize(input, s.lineBufferLen)
 
 	fmt.Println("reader started")
 
@@ -58,9 +59,8 @@ func (s *GearLogger) Read(input io.Reader, queue chan []byte, wg *sync.WaitGroup
 	var drops int64 = 0
 	var cumuReadDuration int64 = 0 // micros
 
-	var delim byte = '\n'
 	for {
-		line, err := reader.ReadBytes(delim)
+		line, _, err := reader.ReadLine()
 
 		start := time.Now()
 
@@ -120,7 +120,7 @@ func (s *GearLogger) Write(queue chan []byte, writer io.Writer, wg *sync.WaitGro
 
 func main() {
 	// syslog setup
-	logger, logErr := syslog.New(syslog.LOG_INFO, "log-gurney")
+	logger, logErr := syslog.New(syslog.LOG_INFO, "openshift-gear-logger")
 
 	if logErr != nil {
 		fmt.Println("Error opening syslog: %s", logErr)
@@ -135,9 +135,9 @@ func main() {
 
 	fmt.Println("using queue size ", queueSize)
 
-	shipper := &GearLogger{queueSize: queueSize, input: os.Stdin, writer: logger}
+	gearLogger := &GearLogger{queueSize: queueSize, input: os.Stdin, writer: logger, lineBufferLen: 2048}
 
-	shipper.Start()
+	gearLogger.Start()
 
 	fmt.Println("done.")
 }
