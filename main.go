@@ -9,14 +9,29 @@ import (
 
 func main() {
 	// arg parsing
-	var queueSize, inputBufferSize int
+	var configFile string
 
-	flag.IntVar(&queueSize, "queuesize", 1000, "max size for the internal line queue")
-	flag.IntVar(&inputBufferSize, "inbufsize", 2048, "max length for an input line")
+	flag.StringVar(&configFile, "config", DefaultConfigFile, "config file location")
 	flag.Parse()
 
-	fmt.Println("queue size ", queueSize)
-	fmt.Println("input buffer size ", inputBufferSize)
+	// load the config
+	config, configErr := ParseConfig(configFile)
+	if configErr != nil {
+		fmt.Printf("Error loading config from %s: %s", configFile, configErr)
+		os.Exit(1)
+	}
+
+	// override output type from environment if allowed by config
+	if config.outputTypeFromEnviron {
+		switch os.Getenv("LOGSHIFTER_OUTPUT_TYPE") {
+		case "syslog":
+			config.outputType = Syslog
+		case "file":
+			config.outputType = File
+		}
+	}
+
+	fmt.Printf("config: %+v\n", config)
 
 	// create a syslog based input writer
 	logger, logErr := syslog.New(syslog.LOG_INFO, "logshifter")
@@ -26,7 +41,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	shifter := &Shifter{queueSize: queueSize, inputBufferSize: inputBufferSize, inputReader: os.Stdin, outputWriter: logger}
+	shifter := &Shifter{queueSize: config.queueSize, inputBufferSize: config.inputBufferSize, inputReader: os.Stdin, outputWriter: logger}
 
 	shifter.Start()
 
