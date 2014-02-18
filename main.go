@@ -10,8 +10,10 @@ import (
 func main() {
 	// arg parsing
 	var configFile string
+	var verbose bool
 
 	flag.StringVar(&configFile, "config", lib.DefaultConfigFile, "config file location")
+	flag.BoolVar(&verbose, "verbose", false, "enables verbose output (e.g. stats reporting)")
 	flag.Parse()
 
 	// load the config
@@ -31,16 +33,20 @@ func main() {
 		}
 	}
 
-	fmt.Printf("config: %+v\n", config)
+	if verbose {
+		fmt.Printf("config: %+v\n", config)
+	}
 
 	// create a syslog based input writer
 	writer := createWriter(config)
 
 	shifter := &lib.Shifter{QueueSize: config.QueueSize, InputBufferSize: config.InputBufferSize, InputReader: os.Stdin, OutputWriter: writer}
 
-	shifter.Start()
+	stats := shifter.Start()
 
-	fmt.Println("done.")
+	if verbose {
+		stats.Print()
+	}
 }
 
 func createWriter(config *lib.Config) lib.Writer {
