@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"github.com/ironcladlou/logshifter/lib"
 	"strings"
 	"testing"
 	"time"
@@ -43,6 +44,8 @@ type DummyWriter struct {
 	writerDelay time.Duration
 }
 
+func (writer *DummyWriter) Init() error { return nil }
+
 func (writer *DummyWriter) Write(b []byte) (written int, err error) {
 	if writer.writerDelay > 0 {
 		time.Sleep(writer.writerDelay)
@@ -55,7 +58,7 @@ func testShifter(msgCount, msgLength, inputBufferSize, queueSize int, readerDela
 	reader := NewDummyReader(msgCount, msgLength, readerDelay)
 	writer := &DummyWriter{}
 
-	shifter := &Shifter{queueSize: queueSize, inputBufferSize: inputBufferSize, inputReader: reader, outputWriter: writer}
+	shifter := &lib.Shifter{QueueSize: queueSize, InputBufferSize: inputBufferSize, InputReader: reader, OutputWriter: writer}
 
 	shifter.Start()
 }
@@ -65,7 +68,7 @@ func benchmarkShifter(queueSize, msgLength, messageCount int, b *testing.B) {
 		reader := NewDummyReader(messageCount, msgLength, 0)
 		writer := &DummyWriter{}
 
-		shifter := &Shifter{queueSize: queueSize, inputBufferSize: msgLength, inputReader: reader, outputWriter: writer}
+		shifter := &lib.Shifter{QueueSize: queueSize, InputBufferSize: msgLength, InputReader: reader, OutputWriter: writer}
 
 		shifter.Start()
 	}

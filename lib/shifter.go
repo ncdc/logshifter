@@ -1,4 +1,4 @@
-package main
+package lib
 
 import (
 	"fmt"
@@ -7,15 +7,21 @@ import (
 )
 
 type Shifter struct {
-	queueSize       int
-	inputBufferSize int
-	inputReader     io.Reader
-	outputWriter    io.Writer
+	QueueSize       int
+	InputBufferSize int
+	InputReader     io.Reader
+	OutputWriter    Writer
+}
+
+type Writer interface {
+	io.Writer
+	Init() error
 }
 
 func (shifter *Shifter) Start() {
 	// setup
-	queue := make(chan []byte, shifter.queueSize)
+	queue := make(chan []byte, shifter.QueueSize)
+	shifter.OutputWriter.Init()
 
 	readGroup := &sync.WaitGroup{}
 	writeGroup := &sync.WaitGroup{}
@@ -23,8 +29,8 @@ func (shifter *Shifter) Start() {
 	readGroup.Add(1)
 	writeGroup.Add(1)
 
-	input := &Input{bufferSize: shifter.inputBufferSize, reader: shifter.inputReader, queue: queue, wg: readGroup}
-	output := &Output{writer: shifter.outputWriter, queue: queue, wg: writeGroup}
+	input := &Input{bufferSize: shifter.InputBufferSize, reader: shifter.InputReader, queue: queue, wg: readGroup}
+	output := &Output{writer: shifter.OutputWriter, queue: queue, wg: writeGroup}
 
 	// start writing before reading: there's still a race here, but not a problem
 	// for this POC.

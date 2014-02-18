@@ -1,4 +1,4 @@
-package main
+package lib
 
 import (
 	"bufio"
@@ -17,12 +17,12 @@ const (
 )
 
 type Config struct {
-	queueSize             int
-	inputBufferSize       int
-	outputType            string
-	syslogBufferSize      int
-	fileBufferSize        int
-	outputTypeFromEnviron bool
+	QueueSize             int
+	InputBufferSize       int
+	OutputType            string
+	SyslogBufferSize      int
+	FileBufferSize        int
+	OutputTypeFromEnviron bool
 }
 
 func ParseConfig(file string) (*Config, error) {
@@ -56,22 +56,22 @@ func ParseConfig(file string) (*Config, error) {
 
 		switch k {
 		case "queuesize":
-			config.queueSize, _ = strconv.Atoi(v)
+			config.QueueSize, _ = strconv.Atoi(v)
 		case "inputbuffersize":
-			config.inputBufferSize, _ = strconv.Atoi(v)
+			config.InputBufferSize, _ = strconv.Atoi(v)
 		case "outputtype":
 			switch v {
 			case "syslog":
-				config.outputType = Syslog
+				config.OutputType = Syslog
 			case "file":
-				config.outputType = File
+				config.OutputType = File
 			}
 		case "syslogbuffersize":
-			config.syslogBufferSize, _ = strconv.Atoi(v)
+			config.SyslogBufferSize, _ = strconv.Atoi(v)
 		case "filebuffersize":
-			config.fileBufferSize, _ = strconv.Atoi(v)
+			config.FileBufferSize, _ = strconv.Atoi(v)
 		case "outputtypefromenviron":
-			config.outputTypeFromEnviron, _ = strconv.ParseBool(v)
+			config.OutputTypeFromEnviron, _ = strconv.ParseBool(v)
 		}
 	}
 
