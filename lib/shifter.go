@@ -3,7 +3,9 @@ package lib
 import (
 	"fmt"
 	"io"
+	"reflect"
 	"sync"
+	"time"
 )
 
 type Shifter struct {
@@ -11,6 +13,11 @@ type Shifter struct {
 	InputBufferSize int
 	InputReader     io.Reader
 	OutputWriter    Writer
+	StatsChannel    chan Stats
+	StatsInterval   time.Duration
+
+	input  *Input
+	output *Output
 }
 
 type Stats struct {
@@ -42,9 +49,16 @@ func (shifter *Shifter) Start() Stats {
 	input := &Input{bufferSize: shifter.InputBufferSize, reader: shifter.InputReader, queue: queue, wg: readGroup}
 	output := &Output{writer: shifter.OutputWriter, queue: queue, wg: writeGroup}
 
+	shifter.input = input
+	shifter.output = output
+
 	// start writing before reading: there's still a race here, not worth bothering with yet
-	go output.Write()
-	go input.Read()
+	go shifter.output.Write()
+	go shifter.input.Read()
+
+	if shifter.StatsChannel != nil {
+		go shifter.reportStats()
+	}
 
 	// wait for the the reader to complete
 	readGroup.Wait()
@@ -53,16 +67,31 @@ func (shifter *Shifter) Start() Stats {
 	close(queue)
 	writeGroup.Wait()
 
+	return shifter.buildStats()
+}
+
+func (shifter *Shifter) reportStats() {
+	ticker := time.Tick(shifter.StatsInterval)
+
+	for {
+		select {
+		case <-ticker:
+			shifter.StatsChannel <- shifter.buildStats()
+		}
+	}
+}
+
+func (shifter *Shifter) buildStats() Stats {
 	stats := Stats{}
 
-	stats.InputLinesTotal = input.TotalLines
-	stats.InputDrops = input.Drops
-	stats.InputCumReadDuration = input.CumReadDuration
+	stats.InputLinesTotal = shifter.input.TotalLines
+	stats.InputDrops = shifter.input.Drops
+	stats.InputCumReadDuration = shifter.input.CumReadDuration
 	stats.InputAvgReadLatency = float64(stats.InputCumReadDuration) / float64(stats.InputLinesTotal)
 
-	stats.OutputLinesTotal = output.TotalLines
-	stats.OutputCumWriteDuration = output.CumWriteDuration
-	stats.OutputAvgWriteDuration = float64(output.CumWriteDuration) / float64(output.TotalLines)
+	stats.OutputLinesTotal = shifter.output.TotalLines
+	stats.OutputCumWriteDuration = shifter.output.CumWriteDuration
+	stats.OutputAvgWriteDuration = float64(stats.OutputCumWriteDuration) / float64(stats.OutputLinesTotal)
 
 	return stats
 }
@@ -73,4 +102,17 @@ func (stats *Stats) Print() {
 	fmt.Printf("avg read latency (us): %.3v\n", stats.InputAvgReadLatency)
 	fmt.Printf("total lines written: %d\n", stats.OutputLinesTotal)
 	fmt.Printf("avg write duration (us): %.3v\n", stats.OutputAvgWriteDuration)
+}
+
+func (stats *Stats) ToString() string {
+	str := ""
+
+	s := reflect.ValueOf(stats).Elem()
+	typeOfS := s.Type()
+	for i := 0; i < s.NumField(); i++ {
+		f := s.Field(i)
+		str += fmt.Sprintf("%s=%v\n", typeOfS.Field(i).Name, f.Interface())
+	}
+
+	return str
 }

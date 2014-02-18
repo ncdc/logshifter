@@ -2,7 +2,6 @@ package lib
 
 import (
 	"bufio"
-	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -26,8 +25,6 @@ type Config struct {
 }
 
 func ParseConfig(file string) (*Config, error) {
-	fmt.Println("loading config from ", file)
-
 	config := &Config{}
 
 	f, err := os.Open(file)
