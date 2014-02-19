@@ -45,8 +45,9 @@ func (shifter *Shifter) Start() Stats {
 	readGroup.Add(1)
 	writeGroup.Add(1)
 
-	input := &Input{bufferSize: shifter.InputBufferSize, reader: shifter.InputReader, queue: queue, wg: readGroup}
-	output := &Output{writer: shifter.OutputWriter, queue: queue, wg: writeGroup}
+	statsEnabled := shifter.StatsChannel != nil && shifter.StatsInterval > 0
+	input := &Input{bufferSize: shifter.InputBufferSize, reader: shifter.InputReader, queue: queue, wg: readGroup, statsEnabled: statsEnabled}
+	output := &Output{writer: shifter.OutputWriter, queue: queue, wg: writeGroup, statsEnabled: statsEnabled}
 
 	shifter.input = input
 	shifter.output = output

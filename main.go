@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/ironcladlou/logshifter/lib"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/ironcladlou/logshifter/lib"
 )
 
 func main() {
@@ -18,8 +19,8 @@ func main() {
 
 	flag.StringVar(&configFile, "config", lib.DefaultConfigFile, "config file location")
 	flag.BoolVar(&verbose, "verbose", false, "enables verbose output (e.g. stats reporting)")
-	flag.StringVar(&statsFileName, "stats", "", "enabled period stat reporting to the specified file")
-	flag.DurationVar(&statsInterval, "statsint", (time.Duration(5) * time.Second), "stats reporting interval")
+	flag.StringVar(&statsFileName, "statsfilename", "", "enabled period stat reporting to the specified file")
+	flag.DurationVar(&statsInterval, "statsinterval", (time.Duration(5) * time.Second), "stats reporting interval")
 	flag.Parse()
 
 	// load the config

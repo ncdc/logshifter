@@ -8,10 +8,11 @@ import (
 )
 
 type Input struct {
-	bufferSize int
-	reader     io.Reader
-	queue      chan []byte
-	wg         *sync.WaitGroup
+	bufferSize   int
+	reader       io.Reader
+	queue        chan []byte
+	wg           *sync.WaitGroup
+	statsEnabled bool
 
 	TotalLines      int64
 	Drops           int64
@@ -30,14 +31,19 @@ func (input *Input) Read() {
 
 	for {
 		line, _, err := reader.ReadLine()
+		var start time.Time
 
-		start := time.Now()
+		if input.statsEnabled {
+			start = time.Now()
+		}
 
 		if err != nil {
 			break
 		}
 
-		input.TotalLines++
+		if input.statsEnabled {
+			input.TotalLines++
+		}
 
 		select {
 		case input.queue <- line:
@@ -45,10 +51,14 @@ func (input *Input) Read() {
 		default:
 			// evict the oldest entry to make room
 			<-input.queue
-			input.Drops++
+			if input.statsEnabled {
+				input.Drops++
+			}
 			input.queue <- line
 		}
 
-		input.CumReadDuration += time.Now().Sub(start).Nanoseconds() / 1000
+		if input.statsEnabled {
+			input.CumReadDuration += time.Now().Sub(start).Nanoseconds() / 1000
+		}
 	}
 }

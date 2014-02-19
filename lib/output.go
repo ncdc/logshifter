@@ -7,9 +7,10 @@ import (
 )
 
 type Output struct {
-	writer io.Writer
-	queue  <-chan []byte
-	wg     *sync.WaitGroup
+	writer       io.Writer
+	queue        <-chan []byte
+	wg           *sync.WaitGroup
+	statsEnabled bool
 
 	TotalLines       int64
 	CumWriteDuration int64 // micros
@@ -21,11 +22,17 @@ func (output *Output) Write() {
 	defer output.wg.Done()
 
 	for line := range output.queue {
-		start := time.Now()
+		var start time.Time
+
+		if output.statsEnabled {
+			start = time.Now()
+		}
 
 		output.writer.Write(line)
 
-		output.TotalLines++
-		output.CumWriteDuration += time.Now().Sub(start).Nanoseconds() / 1000
+		if output.statsEnabled {
+			output.TotalLines++
+			output.CumWriteDuration += time.Now().Sub(start).Nanoseconds() / 1000
+		}
 	}
 }
