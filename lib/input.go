@@ -31,22 +31,30 @@ func (input *Input) Read() {
 	for {
 		line, _, err := reader.ReadLine()
 
-		start := time.Now()
-
 		if err != nil {
 			break
 		}
 
+		if len(line) == 0 {
+			continue
+		}
+
+		cp := make([]byte, len(line))
+
+		copy(cp, line)
+
+		start := time.Now()
+
 		input.TotalLines++
 
 		select {
-		case input.queue <- line:
+		case input.queue <- cp:
 			// queued
 		default:
 			// evict the oldest entry to make room
 			<-input.queue
 			input.Drops++
-			input.queue <- line
+			input.queue <- cp
 		}
 
 		input.CumReadDuration += time.Now().Sub(start).Nanoseconds() / 1000
