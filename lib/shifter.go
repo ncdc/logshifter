@@ -3,7 +3,6 @@ package lib
 import (
 	"fmt"
 	"io"
-	"reflect"
 	"sync"
 	"time"
 )
@@ -102,17 +101,4 @@ func (stats *Stats) Print() {
 	fmt.Printf("avg read latency (us): %.3v\n", stats.InputAvgReadLatency)
 	fmt.Printf("total lines written: %d\n", stats.OutputLinesTotal)
 	fmt.Printf("avg write duration (us): %.3v\n", stats.OutputAvgWriteDuration)
-}
-
-func (stats *Stats) ToString() string {
-	str := ""
-
-	s := reflect.ValueOf(stats).Elem()
-	typeOfS := s.Type()
-	for i := 0; i < s.NumField(); i++ {
-		f := s.Field(i)
-		str += fmt.Sprintf("%s=%v\n", typeOfS.Field(i).Name, f.Interface())
-	}
-
-	return str
 }
