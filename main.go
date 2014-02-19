@@ -1,23 +1,24 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/ironcladlou/logshifter/lib"
-	"io/ioutil"
 	"os"
+	"sync"
 	"time"
 )
 
 func main() {
 	// arg parsing
-	var configFile, statsFile string
+	var configFile, statsFileName string
 	var verbose bool
 	var statsInterval time.Duration
 
 	flag.StringVar(&configFile, "config", lib.DefaultConfigFile, "config file location")
 	flag.BoolVar(&verbose, "verbose", false, "enables verbose output (e.g. stats reporting)")
-	flag.StringVar(&statsFile, "stats", "", "enabled period stat reporting to the specified file")
+	flag.StringVar(&statsFileName, "stats", "", "enabled period stat reporting to the specified file")
 	flag.DurationVar(&statsInterval, "statsint", (time.Duration(5) * time.Second), "stats reporting interval")
 	flag.Parse()
 
@@ -43,14 +44,9 @@ func main() {
 	}
 
 	var statsChannel chan lib.Stats
-	if len(statsFile) > 0 {
-		c, err := createStatsChannel(statsFile)
-		if err != nil {
-			fmt.Printf("Error opening stats file %s: %s", statsFile, err)
-			os.Exit(1)
-		}
-
-		statsChannel = c
+	var statsWaitGroup *sync.WaitGroup
+	if len(statsFileName) > 0 {
+		statsChannel, statsWaitGroup = createStatsChannel(statsFileName)
 	}
 
 	// create a syslog based input writer
@@ -62,6 +58,7 @@ func main() {
 
 	if statsChannel != nil {
 		close(statsChannel)
+		statsWaitGroup.Wait()
 	}
 
 	if verbose {
@@ -80,21 +77,29 @@ func createWriter(config *lib.Config) lib.Writer {
 	}
 }
 
-func createStatsChannel(file string) (chan lib.Stats, error) {
-	// verify we can write to the target file
-	f, err := os.Create(file)
-	if err != nil {
-		return nil, err
-	}
-	f.Close()
-
+func createStatsChannel(file string) (chan lib.Stats, *sync.WaitGroup) {
 	c := make(chan lib.Stats)
 
-	go func() {
-		for stat := range c {
-			ioutil.WriteFile(file, []byte(stat.ToString()), os.ModePerm)
-		}
-	}()
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
 
-	return c, nil
+	go func(file string, wg *sync.WaitGroup) {
+		defer wg.Done()
+
+		f, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.ModePerm)
+		if err != nil {
+			return
+		}
+
+		for stat := range c {
+			if jsonBytes, err := json.Marshal(stat); err == nil {
+				f.Write(jsonBytes)
+				f.WriteString("\n")
+			}
+		}
+
+		f.Close()
+	}(file, wg)
+
+	return c, wg
 }
