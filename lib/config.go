@@ -16,12 +16,12 @@ const (
 )
 
 type Config struct {
-	QueueSize             int
-	InputBufferSize       int
-	OutputType            string
-	SyslogBufferSize      int
-	FileBufferSize        int
-	OutputTypeFromEnviron bool
+	QueueSize             int    // size of the internal log message queue
+	InputBufferSize       int    // input up to \n or this number of bytes is considered a line
+	OutputType            string // one of syslog, file
+	SyslogBufferSize      int    // lines bound for syslog lines are split at this size
+	FileBufferSize        int    // lines bound for a file are split at this size
+	OutputTypeFromEnviron bool   // allows outputtype to be overridden via LOGSHIFTER_OUTPUT_TYPE
 }
 
 func ParseConfig(file string) (*Config, error) {
@@ -51,7 +51,7 @@ func ParseConfig(file string) (*Config, error) {
 		k := strings.Trim(c[0], "\n ")
 		v := strings.Trim(c[1], "\n ")
 
-		switch k {
+		switch strings.ToLower(k) {
 		case "queuesize":
 			config.QueueSize, _ = strconv.Atoi(v)
 		case "inputbuffersize":
