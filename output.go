@@ -1,4 +1,4 @@
-package lib
+package main
 
 import (
 	"io"
@@ -10,10 +10,7 @@ type Output struct {
 	writer       io.Writer
 	queue        <-chan []byte
 	wg           *sync.WaitGroup
-	statsEnabled bool
-
-	TotalLines       int64
-	CumWriteDuration int64 // micros
+	statsChannel chan Stat
 }
 
 // Reads from a queue and writes to writer until the queue channel
@@ -24,15 +21,15 @@ func (output *Output) Write() {
 	for line := range output.queue {
 		var start time.Time
 
-		if output.statsEnabled {
+		if output.statsChannel != nil {
 			start = time.Now()
 		}
 
 		output.writer.Write(line)
 
-		if output.statsEnabled {
-			output.TotalLines++
-			output.CumWriteDuration += time.Now().Sub(start).Nanoseconds() / 1000
+		if output.statsChannel != nil {
+			output.statsChannel <- Stat{name: "output.write", value: 1.0}
+			output.statsChannel <- Stat{name: "output.write.duration", value: float64(time.Now().Sub(start).Nanoseconds()) / float64(1000)}
 		}
 	}
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/ironcladlou/logshifter/lib"
 	"testing"
 )
 
@@ -10,7 +9,7 @@ func benchmarkShifter(queueSize int, msgLength int, messageCount int64, b *testi
 		reader := NewDummyReader(messageCount, msgLength, 0)
 		writer := &DummyWriter{}
 
-		shifter := &lib.Shifter{QueueSize: queueSize, InputBufferSize: msgLength, InputReader: reader, OutputWriter: writer}
+		shifter := &Shifter{queueSize: queueSize, inputBufferSize: msgLength, inputReader: reader, outputWriter: writer}
 
 		shifter.Start()
 	}
