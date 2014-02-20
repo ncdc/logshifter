@@ -29,7 +29,6 @@ func (writer *FileWriter) Init() error {
 	}
 
 	filename := path.Join(basedir, writer.tag)
-	fmt.Println("writing to ", filename)
 
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_APPEND, os.ModePerm)
 	if err != nil {
