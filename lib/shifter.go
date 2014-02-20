@@ -1,7 +1,6 @@
 package lib
 
 import (
-	"fmt"
 	"io"
 	"sync"
 	"time"
@@ -12,6 +11,7 @@ type Shifter struct {
 	InputBufferSize int
 	InputReader     io.Reader
 	OutputWriter    Writer
+	StatsEnabled    bool
 	StatsChannel    chan Stats
 	StatsInterval   time.Duration
 
@@ -45,9 +45,20 @@ func (shifter *Shifter) Start() Stats {
 	readGroup.Add(1)
 	writeGroup.Add(1)
 
-	statsEnabled := shifter.StatsChannel != nil && shifter.StatsInterval > 0
-	input := &Input{bufferSize: shifter.InputBufferSize, reader: shifter.InputReader, queue: queue, wg: readGroup, statsEnabled: statsEnabled}
-	output := &Output{writer: shifter.OutputWriter, queue: queue, wg: writeGroup, statsEnabled: statsEnabled}
+	input := &Input{
+		bufferSize:   shifter.InputBufferSize,
+		reader:       shifter.InputReader,
+		queue:        queue,
+		wg:           readGroup,
+		statsEnabled: shifter.StatsEnabled,
+	}
+
+	output := &Output{
+		writer:       shifter.OutputWriter,
+		queue:        queue,
+		wg:           writeGroup,
+		statsEnabled: shifter.StatsEnabled,
+	}
 
 	shifter.input = input
 	shifter.output = output
@@ -56,7 +67,7 @@ func (shifter *Shifter) Start() Stats {
 	go shifter.output.Write()
 	go shifter.input.Read()
 
-	if shifter.StatsChannel != nil {
+	if shifter.StatsEnabled && shifter.StatsChannel != nil {
 		go shifter.reportStats()
 	}
 
@@ -94,12 +105,4 @@ func (shifter *Shifter) buildStats() Stats {
 	stats.OutputAvgWriteDuration = float64(stats.OutputCumWriteDuration) / float64(stats.OutputLinesTotal)
 
 	return stats
-}
-
-func (stats *Stats) Print() {
-	fmt.Printf("total lines read: %d\n", stats.InputLinesTotal)
-	fmt.Printf("reader evictions: %d\n", stats.InputDrops)
-	fmt.Printf("avg read latency (us): %.3v\n", stats.InputAvgReadLatency)
-	fmt.Printf("total lines written: %d\n", stats.OutputLinesTotal)
-	fmt.Printf("avg write duration (us): %.3v\n", stats.OutputAvgWriteDuration)
 }

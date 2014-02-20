@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/ironcladlou/logshifter/lib"
 	"testing"
 )
@@ -10,7 +12,13 @@ func TestSimpleDispatch(t *testing.T) {
 
 	reader := NewDummyReader(msgCount, 100, 0)
 	writer := &DummyWriter{}
-	shifter := &lib.Shifter{QueueSize: 1000, InputBufferSize: 100, InputReader: reader, OutputWriter: writer}
+	shifter := &lib.Shifter{
+		QueueSize:       1000,
+		InputBufferSize: 100,
+		InputReader:     reader,
+		OutputWriter:    writer,
+		StatsEnabled:    true,
+	}
 
 	stats := shifter.Start()
 
@@ -22,7 +30,7 @@ func TestSimpleDispatch(t *testing.T) {
 		t.Fatalf("expected %d output lines, got %d", msgCount, stats.OutputLinesTotal)
 	}
 
-	stats.Print()
+	printStats(stats)
 }
 
 // Test to ensure that lines exceeding the input buffer size are split
@@ -32,7 +40,13 @@ func TestInputBufferOverflow(t *testing.T) {
 
 	reader := NewDummyReader(msgCount, 200, 0)
 	writer := &DummyWriter{}
-	shifter := &lib.Shifter{QueueSize: 2000, InputBufferSize: 100, InputReader: reader, OutputWriter: writer}
+	shifter := &lib.Shifter{
+		QueueSize:       2000,
+		InputBufferSize: 100,
+		InputReader:     reader,
+		OutputWriter:    writer,
+		StatsEnabled:    true,
+	}
 
 	stats := shifter.Start()
 
@@ -44,5 +58,11 @@ func TestInputBufferOverflow(t *testing.T) {
 		t.Fatalf("expected %d output lines, got %d", msgCount, stats.OutputLinesTotal)
 	}
 
-	stats.Print()
+	printStats(stats)
+}
+
+func printStats(stats lib.Stats) {
+	if jsonBytes, err := json.Marshal(stats); err == nil {
+		fmt.Printf("stats: %s\n", jsonBytes)
+	}
 }

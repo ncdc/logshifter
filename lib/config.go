@@ -27,10 +27,10 @@ type Config struct {
 func ParseConfig(file string) (*Config, error) {
 	config := &Config{
 		QueueSize:             100,
-		InputBufferSize:       1024,
+		InputBufferSize:       2048,
 		OutputType:            "syslog",
-		SyslogBufferSize:      1024,
-		FileBufferSize:        1024,
+		SyslogBufferSize:      2048,
+		FileBufferSize:        2048,
 		OutputTypeFromEnviron: true,
 	}
 

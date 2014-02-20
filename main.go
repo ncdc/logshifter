@@ -4,11 +4,10 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/ironcladlou/logshifter/lib"
 	"os"
 	"sync"
 	"time"
-
-	"github.com/ironcladlou/logshifter/lib"
 )
 
 func main() {
@@ -46,14 +45,24 @@ func main() {
 
 	var statsChannel chan lib.Stats
 	var statsWaitGroup *sync.WaitGroup
+	var statsEnabled bool = false
 	if len(statsFileName) > 0 {
 		statsChannel, statsWaitGroup = createStatsChannel(statsFileName)
+		statsEnabled = true
 	}
 
 	// create a syslog based input writer
 	writer := createWriter(config)
 
-	shifter := &lib.Shifter{QueueSize: config.QueueSize, InputBufferSize: config.InputBufferSize, InputReader: os.Stdin, OutputWriter: writer, StatsChannel: statsChannel, StatsInterval: statsInterval}
+	shifter := &lib.Shifter{
+		QueueSize:       config.QueueSize,
+		InputBufferSize: config.InputBufferSize,
+		InputReader:     os.Stdin,
+		OutputWriter:    writer,
+		StatsEnabled:    statsEnabled,
+		StatsChannel:    statsChannel,
+		StatsInterval:   statsInterval,
+	}
 
 	stats := shifter.Start()
 
@@ -63,7 +72,9 @@ func main() {
 	}
 
 	if verbose && statsChannel != nil {
-		stats.Print()
+		if jsonBytes, err := json.Marshal(stats); err == nil {
+			fmt.Printf("%s\n", jsonBytes)
+		}
 	}
 }
 
