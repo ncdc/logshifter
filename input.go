@@ -1,4 +1,4 @@
-package lib
+package main
 
 import (
 	"bufio"
@@ -12,11 +12,7 @@ type Input struct {
 	reader       io.Reader
 	queue        chan []byte
 	wg           *sync.WaitGroup
-	statsEnabled bool
-
-	TotalLines      int64
-	Drops           int64
-	CumReadDuration int64 // micros
+	statsChannel chan Stat
 }
 
 // Reads lines from input and writes to queue. If queue is unavailable for
@@ -31,8 +27,9 @@ func (input *Input) Read() {
 
 	for {
 		line, _, err := reader.ReadLine()
+
 		var start time.Time
-		if input.statsEnabled {
+		if input.statsChannel != nil {
 			start = time.Now()
 		}
 
@@ -48,8 +45,8 @@ func (input *Input) Read() {
 
 		copy(cp, line)
 
-		if input.statsEnabled {
-			input.TotalLines++
+		if input.statsChannel != nil {
+			input.statsChannel <- Stat{name: "input.read", value: 1.0}
 		}
 
 		select {
@@ -58,14 +55,14 @@ func (input *Input) Read() {
 		default:
 			// evict the oldest entry to make room
 			<-input.queue
-			if input.statsEnabled {
-				input.Drops++
+			if input.statsChannel != nil {
+				input.statsChannel <- Stat{name: "input.drop", value: 1.0}
 			}
 			input.queue <- cp
 		}
 
-		if input.statsEnabled {
-			input.CumReadDuration += time.Now().Sub(start).Nanoseconds() / 1000
+		if input.statsChannel != nil {
+			input.statsChannel <- Stat{name: "input.read.duration", value: float64(time.Now().Sub(start).Nanoseconds()) / float64(1000)}
 		}
 	}
 }
