@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/ironcladlou/logshifter/lib"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/ironcladlou/logshifter/lib"
 )
 
 func main() {
@@ -104,9 +105,13 @@ func createStatsChannel(file string) (chan lib.Stats, *sync.WaitGroup) {
 		}
 
 		for stat := range c {
+			fmt.Println("GOT STAT")
 			if jsonBytes, err := json.Marshal(stat); err == nil {
 				f.Write(jsonBytes)
 				f.WriteString("\n")
+			} else {
+				fmt.Println("ERROR")
+				fmt.Println(err)
 			}
 		}
 

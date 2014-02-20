@@ -13,10 +13,14 @@ type Input struct {
 	queue        chan []byte
 	wg           *sync.WaitGroup
 	statsEnabled bool
+	resetStats   chan int
 
-	TotalLines      int64
-	Drops           int64
-	CumReadDuration int64 // micros
+	CurrentLines        int64
+	TotalLines          int64
+	CurrentDrops        int64
+	TotalDrops          int64
+	CurrentReadDuration int64 // micros
+	TotalReadDuration   int64 // micros
 }
 
 // Reads lines from input and writes to queue. If queue is unavailable for
@@ -26,6 +30,17 @@ type Input struct {
 // Signals to a WaitGroup when there's nothing left to read from input.
 func (input *Input) Read() {
 	defer input.wg.Done()
+
+	go func() {
+		for {
+			select {
+			case <-input.resetStats:
+				input.CurrentLines = 0
+				input.CurrentDrops = 0
+				input.CurrentReadDuration = 0
+			}
+		}
+	}()
 
 	reader := bufio.NewReaderSize(input.reader, input.bufferSize)
 
@@ -49,6 +64,7 @@ func (input *Input) Read() {
 		copy(cp, line)
 
 		if input.statsEnabled {
+			input.CurrentLines++
 			input.TotalLines++
 		}
 
@@ -59,13 +75,16 @@ func (input *Input) Read() {
 			// evict the oldest entry to make room
 			<-input.queue
 			if input.statsEnabled {
-				input.Drops++
+				input.CurrentDrops++
+				input.TotalDrops++
 			}
 			input.queue <- cp
 		}
 
 		if input.statsEnabled {
-			input.CumReadDuration += time.Now().Sub(start).Nanoseconds() / 1000
+			delta := time.Now().Sub(start).Nanoseconds() / 1000
+			input.CurrentReadDuration += delta
+			input.TotalReadDuration += delta
 		}
 	}
 }

@@ -11,9 +11,12 @@ type Output struct {
 	queue        <-chan []byte
 	wg           *sync.WaitGroup
 	statsEnabled bool
+	resetStats   chan int
 
-	TotalLines       int64
-	CumWriteDuration int64 // micros
+	CurrentLines         int64
+	TotalLines           int64
+	CurrentWriteDuration int64 // micros
+	TotalWriteDuration   int64 // micros
 }
 
 // Reads from a queue and writes to writer until the queue channel
@@ -21,18 +24,27 @@ type Output struct {
 func (output *Output) Write() {
 	defer output.wg.Done()
 
-	for line := range output.queue {
-		var start time.Time
+	for {
+		select {
+		case <-output.resetStats:
+			output.CurrentLines = 0
+			output.CurrentWriteDuration = 0
+		case line := <-output.queue:
+			var start time.Time
 
-		if output.statsEnabled {
-			start = time.Now()
-		}
+			if output.statsEnabled {
+				start = time.Now()
+			}
 
-		output.writer.Write(line)
+			output.writer.Write(line)
 
-		if output.statsEnabled {
-			output.TotalLines++
-			output.CumWriteDuration += time.Now().Sub(start).Nanoseconds() / 1000
+			if output.statsEnabled {
+				output.TotalLines++
+				output.CurrentLines++
+				delta := time.Now().Sub(start).Nanoseconds() / 1000
+				output.CurrentWriteDuration += delta
+				output.TotalWriteDuration += delta
+			}
 		}
 	}
 }
