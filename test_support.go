@@ -43,7 +43,8 @@ type DummyWriter struct {
 	writerDelay time.Duration
 }
 
-func (writer *DummyWriter) Init() error { return nil }
+func (writer *DummyWriter) Init() error  { return nil }
+func (writer *DummyWriter) Close() error { return nil }
 
 func (writer *DummyWriter) Write(b []byte) (written int, err error) {
 	if writer.writerDelay > 0 {

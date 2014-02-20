@@ -21,6 +21,7 @@ type Config struct {
 	outputType            string // one of syslog, file
 	syslogBufferSize      int    // lines bound for syslog lines are split at this size
 	fileBufferSize        int    // lines bound for a file are split at this size
+	fileWriterDir         string // base dir for the file writer output's file
 	outputTypeFromEnviron bool   // allows outputtype to be overridden via LOGSHIFTER_OUTPUT_TYPE
 }
 
@@ -59,9 +60,9 @@ func ParseConfig(file string) (*Config, error) {
 		v := strings.Trim(c[1], "\n ")
 
 		switch strings.ToLower(k) {
-		case "queueSize":
+		case "queuesize":
 			config.queueSize, _ = strconv.Atoi(v)
-		case "inputBufferSize":
+		case "inputbuffersize":
 			config.inputBufferSize, _ = strconv.Atoi(v)
 		case "outputtype":
 			switch v {
@@ -76,6 +77,8 @@ func ParseConfig(file string) (*Config, error) {
 			config.fileBufferSize, _ = strconv.Atoi(v)
 		case "outputtypefromenviron":
 			config.outputTypeFromEnviron, _ = strconv.ParseBool(v)
+		case "filewriterdir":
+			config.fileWriterDir = v
 		}
 	}
 
