@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -11,7 +12,7 @@ import (
 
 func main() {
 	// arg parsing
-	var configFile, statsFileName string
+	var configFile, statsFileName, tag string
 	var verbose bool
 	var statsInterval time.Duration
 
@@ -19,6 +20,7 @@ func main() {
 	flag.BoolVar(&verbose, "verbose", false, "enables verbose output (e.g. stats reporting)")
 	flag.StringVar(&statsFileName, "statsfilename", "", "enabled period stat reporting to the specified file")
 	flag.DurationVar(&statsInterval, "statsinterval", (time.Duration(5) * time.Second), "stats reporting interval")
+	flag.StringVar(&tag, "tag", "logshifter", "tag used by outputs for extra message context (e.g. program name)")
 	flag.Parse()
 
 	// load the config
@@ -50,7 +52,11 @@ func main() {
 		statsGroup, statsShutdownChan = readStats(statsChannel, statsInterval, statsFileName)
 	}
 
-	writer := createWriter(config)
+	writer, err := createWriter(config, tag)
+	if err != nil {
+		fmt.Printf("error creating writer: %s", err)
+		os.Exit(1)
+	}
 
 	shifter := &Shifter{
 		queueSize:       config.queueSize,
@@ -69,14 +75,14 @@ func main() {
 	}
 }
 
-func createWriter(config *Config) Writer {
+func createWriter(config *Config, tag string) (Writer, error) {
 	switch config.outputType {
 	case Syslog:
-		return &SyslogWriter{config: config}
+		return &SyslogWriter{config: config, tag: tag}, nil
 	case File:
-		return nil
+		return &FileWriter{config: config, tag: tag}, nil
 	default:
-		return nil
+		return nil, errors.New("unsupported output type")
 	}
 }
 

@@ -7,12 +7,12 @@ import (
 
 type SyslogWriter struct {
 	config *Config
-
+	tag    string
 	logger *syslog.Writer
 }
 
 func (writer *SyslogWriter) Init() error {
-	logger, err := syslog.New(syslog.LOG_INFO, "logshifter")
+	logger, err := syslog.New(syslog.LOG_INFO, writer.tag)
 
 	if err != nil {
 		return err
@@ -21,6 +21,10 @@ func (writer *SyslogWriter) Init() error {
 	writer.logger = logger
 
 	return nil
+}
+
+func (writer *SyslogWriter) Close() error {
+	return writer.logger.Close()
 }
 
 func (writer *SyslogWriter) Write(b []byte) (n int, err error) {

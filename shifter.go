@@ -10,14 +10,14 @@ type Shifter struct {
 	inputReader     io.Reader
 	outputWriter    Writer
 	statsChannel    chan Stat
-
-	input  *Input
-	output *Output
+	input           *Input
+	output          *Output
 }
 
 type Writer interface {
 	io.Writer
 	Init() error
+	Close() error
 }
 
 type Stat struct {
@@ -53,4 +53,6 @@ func (shifter *Shifter) Start() {
 	// shut down the writer by closing the queue
 	close(queue)
 	writeGroup.Wait()
+
+	shifter.outputWriter.Close()
 }
