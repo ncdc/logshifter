@@ -25,7 +25,14 @@ type Config struct {
 }
 
 func ParseConfig(file string) (*Config, error) {
-	config := &Config{}
+	config := &Config{
+		QueueSize:             100,
+		InputBufferSize:       2048,
+		OutputType:            "syslog",
+		SyslogBufferSize:      2048,
+		FileBufferSize:        2048,
+		OutputTypeFromEnviron: true,
+	}
 
 	f, err := os.Open(file)
 	defer f.Close()

@@ -18,8 +18,8 @@ func main() {
 
 	flag.StringVar(&configFile, "config", lib.DefaultConfigFile, "config file location")
 	flag.BoolVar(&verbose, "verbose", false, "enables verbose output (e.g. stats reporting)")
-	flag.StringVar(&statsFileName, "stats", "", "enabled period stat reporting to the specified file")
-	flag.DurationVar(&statsInterval, "statsint", (time.Duration(5) * time.Second), "stats reporting interval")
+	flag.StringVar(&statsFileName, "statsfilename", "", "enabled period stat reporting to the specified file")
+	flag.DurationVar(&statsInterval, "statsinterval", (time.Duration(5) * time.Second), "stats reporting interval")
 	flag.Parse()
 
 	// load the config
@@ -45,14 +45,24 @@ func main() {
 
 	var statsChannel chan lib.Stats
 	var statsWaitGroup *sync.WaitGroup
+	var statsEnabled bool = false
 	if len(statsFileName) > 0 {
 		statsChannel, statsWaitGroup = createStatsChannel(statsFileName)
+		statsEnabled = true
 	}
 
 	// create a syslog based input writer
 	writer := createWriter(config)
 
-	shifter := &lib.Shifter{QueueSize: config.QueueSize, InputBufferSize: config.InputBufferSize, InputReader: os.Stdin, OutputWriter: writer, StatsChannel: statsChannel, StatsInterval: statsInterval}
+	shifter := &lib.Shifter{
+		QueueSize:       config.QueueSize,
+		InputBufferSize: config.InputBufferSize,
+		InputReader:     os.Stdin,
+		OutputWriter:    writer,
+		StatsEnabled:    statsEnabled,
+		StatsChannel:    statsChannel,
+		StatsInterval:   statsInterval,
+	}
 
 	stats := shifter.Start()
 
@@ -61,8 +71,10 @@ func main() {
 		statsWaitGroup.Wait()
 	}
 
-	if verbose {
-		stats.Print()
+	if verbose && statsChannel != nil {
+		if jsonBytes, err := json.Marshal(stats); err == nil {
+			fmt.Printf("%s\n", jsonBytes)
+		}
 	}
 }
 
