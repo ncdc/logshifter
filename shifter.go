@@ -2,7 +2,6 @@ package main
 
 import (
 	"io"
-	"sync"
 )
 
 type Shifter struct {
@@ -31,33 +30,22 @@ func (shifter *Shifter) Start() {
 	queue := make(chan []byte, shifter.queueSize)
 	shifter.outputWriter.Init()
 
-	readGroup := &sync.WaitGroup{}
-	writeGroup := &sync.WaitGroup{}
-
-	readGroup.Add(1)
-	writeGroup.Add(1)
-
-	input := &Input{
+	shifter.input = &Input{
 		bufferSize:   shifter.inputBufferSize,
 		reader:       shifter.inputReader,
 		queue:        queue,
-		wg:           readGroup,
 		statsChannel: shifter.statsChannel,
 	}
 
-	output := &Output{
+	shifter.output = &Output{
 		writer:       shifter.outputWriter,
 		queue:        queue,
-		wg:           writeGroup,
 		statsChannel: shifter.statsChannel,
 	}
 
-	shifter.input = input
-	shifter.output = output
-
 	// start writing before reading: there's still a race here, not worth bothering with yet
-	go shifter.output.Write()
-	go shifter.input.Read()
+	writeGroup := shifter.output.Write()
+	readGroup := shifter.input.Read()
 
 	// wait for the the reader to complete
 	readGroup.Wait()
