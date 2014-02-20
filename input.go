@@ -11,7 +11,6 @@ type Input struct {
 	bufferSize   int
 	reader       io.Reader
 	queue        chan []byte
-	wg           *sync.WaitGroup
 	statsChannel chan Stat
 }
 
@@ -20,9 +19,19 @@ type Input struct {
 // a stable consumption rate from input.
 //
 // Signals to a WaitGroup when there's nothing left to read from input.
-func (input *Input) Read() {
-	defer input.wg.Done()
+func (input *Input) Read() *sync.WaitGroup {
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
 
+	go func(wg *sync.WaitGroup) {
+		input.read()
+		wg.Done()
+	}(wg)
+
+	return wg
+}
+
+func (input *Input) read() {
 	reader := bufio.NewReaderSize(input.reader, input.bufferSize)
 
 	for {
